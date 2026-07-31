@@ -1,15 +1,15 @@
 name: Run pipeline
 
-# Every 2 hours -- deliberately backed off from an earlier 30-min schedule
-# after real runs (both from a home IP and from GitHub's own runners) hit
-# heavy Flipkart 403 blocking. Lower request volume is the cheap first
-# lever to try before adding a proxy/rotating-IP service. Matches
+# Every 6 hours -- ScraperAPI (see fetch_offers.py) fixed the earlier
+# Flipkart 403 blocking, so this interval isn't a reliability workaround
+# anymore; it's deliberately conservative purely to control ScraperAPI
+# request-volume cost (~108 requests/run, explicit user request). Matches
 # dashboard.py's STALE_RUN_THRESHOLD_MINUTES, kept in sync with this value.
 # workflow_dispatch lets a run be triggered manually from the Actions tab
 # or `gh workflow run` for testing.
 on:
   schedule:
-    - cron: "0 */2 * * *"
+    - cron: "0 */6 * * *"
   workflow_dispatch:
 
 # GitHub-side belt on top of the DB-level try_start_pipeline_run lock

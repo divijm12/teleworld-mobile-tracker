@@ -78,7 +78,7 @@ def format_offer_summary(offer: dict) -> str:
 app.jinja_env.filters["timestamp"] = format_timestamp
 app.jinja_env.filters["offer_summary"] = format_offer_summary
 
-STALE_RUN_THRESHOLD_MINUTES = 150  # matches the 2-hour GH Actions schedule + buffer
+STALE_RUN_THRESHOLD_MINUTES = 420  # matches the 6-hour GH Actions schedule + buffer
 
 
 def get_pipeline_health() -> Optional[dict]:
