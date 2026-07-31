@@ -1,0 +1,39 @@
+name: Run pipeline
+
+# Every 30 min, matching dashboard.py's existing STALE_RUN_THRESHOLD_MINUTES
+# (15-30 min) design assumption. workflow_dispatch lets a run be triggered
+# manually from the Actions tab or `gh workflow run` for testing.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+# GitHub-side belt on top of the DB-level try_start_pipeline_run lock
+# (see pipeline_runs table / run_pipeline.py) -- a run that's still going
+# when the next schedule fires won't be duplicated by GitHub itself, and
+# the DB lock is the actual source of truth if a run is ever triggered
+# from somewhere outside this workflow (e.g. locally) at the same time.
+concurrency:
+  group: teleworld-pipeline
+  cancel-in-progress: false
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pipeline
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python3 run_pipeline.py
