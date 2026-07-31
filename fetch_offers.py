@@ -24,6 +24,7 @@ accumulates; offer_parser.py picks up snapshots where parsed_at IS NULL.
 
 import json
 import logging
+import os
 import random
 import re
 import time
@@ -52,6 +53,15 @@ REQUEST_TIMEOUT = 15  # seconds
 MIN_DELAY = 2.0  # seconds between requests
 MAX_DELAY = 5.0
 MARKETPLACE = "flipkart"
+
+# ScraperAPI routing -- added after Flipkart started returning HTTP 403s at
+# volume and Amazon India was confirmed (live test) to hard-block plain
+# requests.get() on the very first attempt. Optional: falls back to a
+# direct request if the key isn't set, so local dev without a key still
+# works against anything not currently being blocked.
+SCRAPERAPI_KEY = os.environ.get("SCRAPERAPI_KEY")
+SCRAPERAPI_ENDPOINT = "https://api.scraperapi.com"
+SCRAPERAPI_TIMEOUT = 60  # ScraperAPI's own internal retries take longer than a direct request
 
 JSONLD_RE = re.compile(
     r'<script type="application/ld\+json"[^>]*id="jsonLD"[^>]*>(.*?)</script>',
@@ -351,10 +361,25 @@ def fetch_variant(target: dict[str, str]) -> dict[str, Any]:
     }
 
     # --- Network fetch ---
+    # ScraperAPI manages its own target-site headers/UA/IP rotation
+    # internally, so our own HEADERS are only meaningful on the direct
+    # path -- sending them to ScraperAPI's own endpoint wouldn't reach
+    # Flipkart/Amazon anyway.
+    if SCRAPERAPI_KEY:
+        request_url = SCRAPERAPI_ENDPOINT
+        request_params = {"api_key": SCRAPERAPI_KEY, "url": url}
+        request_headers = {}
+        timeout = SCRAPERAPI_TIMEOUT
+    else:
+        request_url = url
+        request_params = {}
+        request_headers = HEADERS
+        timeout = REQUEST_TIMEOUT
+
     try:
-        response = requests.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+        response = requests.get(request_url, headers=request_headers, params=request_params, timeout=timeout)
     except requests.exceptions.Timeout:
-        result["error"] = f"Request timed out after {REQUEST_TIMEOUT}s"
+        result["error"] = f"Request timed out after {timeout}s"
         log.error("%s: %s", label, result["error"])
         return result
     except requests.exceptions.RequestException as e:
