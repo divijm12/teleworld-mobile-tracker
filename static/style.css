@@ -1,0 +1,262 @@
+:root {
+  --bg: #fafafa;
+  --card-bg: #ffffff;
+  --border: #e2e2e2;
+  --text: #1a1a1a;
+  --muted: #767676;
+  --accent: #2563eb;
+  --warn-bg: #fff4d6;
+  --warn-border: #e8b923;
+  --error-bg: #fde2e2;
+  --error-border: #d94b4b;
+  --flag-row-bg: #fff9ec;
+  --ok-bg: #e3f7e9;
+  --ok-border: #34a35f;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 1.5rem 3rem;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding: 1.5rem 0 1rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+h1 { margin: 0; font-size: 1.4rem; }
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.flag-count {
+  color: #92400e;
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: 999px;
+  padding: 0.15rem 0.7rem;
+}
+
+.stock-count {
+  font: inherit;
+  cursor: pointer;
+  color: #7f1d1d;
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: 999px;
+  padding: 0.15rem 0.7rem;
+}
+.stock-count:hover { filter: brightness(0.97); }
+
+.stock-row-summary { color: var(--muted) !important; }
+
+.alert-wrap { position: relative; }
+
+.alert-count {
+  font: inherit;
+  cursor: pointer;
+  color: #14532d;
+  background: var(--ok-bg);
+  border: 1px solid var(--ok-border);
+  border-radius: 999px;
+  padding: 0.15rem 0.7rem;
+}
+.alert-count:hover { filter: brightness(0.97); }
+
+.alert-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 10;
+  width: 320px;
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 0.4rem;
+}
+
+.alert-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+  cursor: pointer;
+  color: var(--text);
+}
+.alert-row:hover { background: var(--bg); }
+.alert-row + .alert-row { border-top: 1px solid var(--border); }
+
+.alert-row-title { font-weight: 600; font-size: 0.85rem; }
+.alert-row-summary { font-size: 0.8rem; color: #14532d; margin-top: 0.15rem; }
+.alert-row-time { font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; }
+
+.refresh-btn {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.refresh-btn:hover { text-decoration: underline; }
+
+.select-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1.25rem;
+  max-width: 420px;
+}
+/* Class selector's `display: flex` above would otherwise beat the native
+   [hidden] attribute's low-specificity UA rule -- make hiding win explicitly. */
+.select-bar[hidden] { display: none; }
+
+.select-bar label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+#phone-select, #color-select, #storage-select, #ram-select {
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: var(--card-bg);
+  color: var(--text);
+}
+#phone-select:focus, #color-select:focus, #storage-select:focus, #ram-select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.empty-state { color: var(--muted); padding: 2rem 0; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+th, td {
+  text-align: left;
+  padding: 0.65rem 0.9rem;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  background: #f5f5f5;
+}
+
+tr:last-child td { border-bottom: none; }
+
+.variant-row.flagged { background: var(--flag-row-bg); }
+.variant-row.out-of-stock { opacity: 0.55; }
+
+.price { font-weight: 600; white-space: nowrap; }
+
+.best-offer { max-width: 220px; }
+
+.effective-price { color: var(--ok-border); }
+
+.price-signal { max-width: 200px; }
+.price-signal .badge { white-space: normal; }
+
+.timestamp { white-space: nowrap; color: var(--muted); font-size: 0.85rem; }
+
+.offers ul { margin: 0; padding-left: 1.1rem; }
+.offers li { margin-bottom: 0.25rem; }
+.offers li.offer-flagged { color: #92400e; }
+
+.muted { color: var(--muted); font-style: italic; }
+
+.badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+.badge-warn {
+  background: var(--warn-bg);
+  color: #92400e;
+  border: 1px solid var(--warn-border);
+}
+.badge-error {
+  background: var(--error-bg);
+  color: #7f1d1d;
+  border: 1px solid var(--error-border);
+}
+.badge-ok {
+  background: var(--ok-bg);
+  color: #14532d;
+  border: 1px solid var(--ok-border);
+}
+.badge-alert {
+  background: var(--ok-bg);
+  color: #14532d;
+  border: 1px solid var(--ok-border);
+  display: block;
+  margin: 0 0 0.3rem;
+  width: fit-content;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16181d;
+    --card-bg: #1f2229;
+    --border: #33363f;
+    --text: #e8e8e8;
+    --muted: #9a9ea8;
+    --accent: #6ea8fe;
+    --warn-bg: #3a2f14;
+    --warn-border: #8a6d1d;
+    --error-bg: #3a1d1d;
+    --error-border: #8a3a3a;
+    --flag-row-bg: #2a2416;
+    --ok-bg: #163524;
+    --ok-border: #2f7a4d;
+  }
+  th { background: #22252c; }
+  .offers li.offer-flagged { color: #f3c98a; }
+  .flag-count { color: #f3c98a; }
+  .stock-count { color: #f2a3a3; }
+  .badge-warn { color: #f3c98a; }
+  .badge-error { color: #f2a3a3; }
+  .badge-ok { color: #86e0ab; }
+  .alert-count { color: #86e0ab; }
+  .alert-row-summary { color: #86e0ab; }
+}

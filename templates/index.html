@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="120">
+  <title>Teleworld Mobile Tracker</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Teleworld Mobile Tracker</h1>
+    <div class="header-meta">
+      <span>{{ total_variants }} variant{{ 's' if total_variants != 1 else '' }} tracked</span>
+      {% if flagged_count %}
+        <span class="flag-count">{{ flagged_count }} with flagged offer{{ 's' if flagged_count != 1 else '' }}</span>
+      {% endif %}
+      {% if out_of_stock_count %}
+        <div class="alert-wrap">
+          <button type="button" id="stock-count-btn" class="stock-count">
+            {{ out_of_stock_count }} out of stock
+          </button>
+          <div id="stock-panel" class="alert-panel" hidden></div>
+        </div>
+      {% endif %}
+      {% if alert_count %}
+        <div class="alert-wrap">
+          <button type="button" id="alert-count-btn" class="alert-count">
+            &#128276; {{ alert_count }} alert{{ 's' if alert_count != 1 else '' }}
+          </button>
+          <div id="alert-panel" class="alert-panel" hidden></div>
+        </div>
+      {% endif %}
+      {% if pipeline_run %}
+        <span class="badge {{ 'badge-error' if pipeline_run.is_stale else 'badge-ok' }}"
+              title="Last run started {{ pipeline_run.started_at | timestamp }} -- status: {{ pipeline_run.status }}{% if pipeline_run.error_summary %} ({{ pipeline_run.error_summary }}){% endif %}">
+          Last run: {{ pipeline_run.started_at | timestamp }} ({{ pipeline_run.status }})
+        </span>
+      {% else %}
+        <span class="badge badge-warn" title="No pipeline_runs rows yet -- run_pipeline.py hasn't run since Phase 4 was set up">
+          No pipeline runs recorded yet
+        </span>
+      {% endif %}
+      <a href="{{ url_for('index') }}" class="refresh-btn">&#8635; Refresh</a>
+    </div>
+  </header>
+
+  <div class="select-bar">
+    <label for="phone-select">Select a phone</label>
+    <select id="phone-select">
+      <option value="">-- choose a phone --</option>
+    </select>
+  </div>
+
+  <div class="select-bar" id="color-bar" hidden>
+    <label for="color-select">Select a color</label>
+    <select id="color-select"></select>
+  </div>
+
+  <div class="select-bar" id="storage-bar" hidden>
+    <label for="storage-select">Select storage</label>
+    <select id="storage-select"></select>
+  </div>
+
+  <div class="select-bar" id="ram-bar" hidden>
+    <label for="ram-select">Select RAM</label>
+    <select id="ram-select"></select>
+  </div>
+
+  <div id="results"></div>
+
+  <script>
+    // Pre-formatted server-side (see dashboard.py) so JS doesn't duplicate
+    // date/offer-text formatting logic -- just renders what's already here.
+    const VARIANTS = {{ variants | tojson }};
+  </script>
+  <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>
