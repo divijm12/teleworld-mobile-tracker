@@ -23,6 +23,7 @@ log = logging.getLogger("notify")
 GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS", "divijmittal122@gmail.com")
 GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
 GMAIL_TO = os.environ.get("GMAIL_TO", GMAIL_ADDRESS)
+GMAIL_CC = os.environ.get("GMAIL_CC", "jugrajsethi@gmail.com")
 
 ALERT_REASON_LABELS = {
     "new_low": "New all-time low",
@@ -65,6 +66,12 @@ def send_alert_email(fired_alerts: list[dict]) -> bool:
     msg["Subject"] = f"Teleworld: {len(fired_alerts)} price alert(s)"
     msg["From"] = GMAIL_ADDRESS
     msg["To"] = GMAIL_TO
+    if GMAIL_CC:
+        # smtplib's send_message() reads To/Cc/Bcc headers to build the
+        # actual SMTP envelope recipient list when to_addrs isn't passed
+        # explicitly -- setting this header is sufficient for real delivery,
+        # not just a cosmetic label.
+        msg["Cc"] = GMAIL_CC
 
     try:
         with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
