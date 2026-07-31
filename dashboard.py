@@ -78,15 +78,15 @@ def format_offer_summary(offer: dict) -> str:
 app.jinja_env.filters["timestamp"] = format_timestamp
 app.jinja_env.filters["offer_summary"] = format_offer_summary
 
-STALE_RUN_THRESHOLD_MINUTES = 45
+STALE_RUN_THRESHOLD_MINUTES = 150  # matches the 2-hour GH Actions schedule + buffer
 
 
 def get_pipeline_health() -> Optional[dict]:
     """Most recent pipeline_runs row, plus whether it counts as healthy --
     either the last completed run wasn't a clean success, or too much time
-    has passed since it started (run_pipeline.py is meant to fire every
-    15-30 min once scheduled, so a longer gap means the scheduler itself
-    has likely stopped firing)."""
+    has passed since it started (run_pipeline.py fires every 2 hours via
+    GitHub Actions -- see .github/workflows/pipeline.yml -- so a longer
+    gap means the scheduler itself has likely stopped firing)."""
     supabase = get_client()
     resp = (
         supabase.table("pipeline_runs")
