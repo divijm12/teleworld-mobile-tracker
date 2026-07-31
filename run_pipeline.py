@@ -22,6 +22,7 @@ from postgrest.exceptions import APIError
 
 import alerting
 import fetch_offers
+import notify
 import offer_parser
 from pipeline_logging import setup_logging
 from supabase_client import get_client
@@ -37,7 +38,7 @@ EMPTY_PARSE_STATS = {
     "non_offers": 0,
     "failed_snapshots": 0,
 }
-EMPTY_ALERT_STATS = {"evaluated": 0, "total": 0, "by_reason": {}}
+EMPTY_ALERT_STATS = {"evaluated": 0, "total": 0, "by_reason": {}, "fired_alerts": []}
 
 
 def try_start_pipeline_run(supabase) -> tuple[Optional[int], bool]:
@@ -153,6 +154,11 @@ def main() -> None:
         alert_duration, alert_stats["evaluated"], alert_stats["total"],
         ", ".join(f"{k}: {v}" for k, v in sorted(alert_stats["by_reason"].items())) or "none",
     )
+
+    try:
+        notify.send_alert_email(alert_stats["fired_alerts"])
+    except Exception:
+        log.exception("Notification step crashed unexpectedly -- alerts were still recorded normally")
 
     total_duration = time.monotonic() - run_start
     parse_ok = parse_stats["snapshots_processed"] - parse_stats["failed_snapshots"]

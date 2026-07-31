@@ -166,7 +166,7 @@ def run_all(supabase) -> dict:
     that fire. Returns summary counts for the caller (run_pipeline.py) to
     log/report."""
     now = datetime.now(timezone.utc)
-    empty_stats = {"evaluated": 0, "total": 0, "by_reason": {}}
+    empty_stats = {"evaluated": 0, "total": 0, "by_reason": {}, "fired_alerts": []}
 
     try:
         snapshots = fetch_latest_snapshots(supabase)
@@ -179,6 +179,7 @@ def run_all(supabase) -> dict:
 
     by_reason: dict[str, int] = {}
     rows_to_insert = []
+    fired_alerts = []  # richer than rows_to_insert -- carries the human-readable label notify.py needs
 
     for snap in snapshots:
         variant_id = snap["variant_id"]
@@ -206,13 +207,22 @@ def run_all(supabase) -> dict:
             f", down from {last_alert['effective_price']}" if last_alert else "",
         )
 
+        reference_price = last_alert["effective_price"] if last_alert else None
         rows_to_insert.append(
             {
                 "variant_id": variant_id,
                 "snapshot_id": snap["snapshot_id"],
                 "reason": reason,
                 "effective_price": effective_price,
-                "reference_price": last_alert["effective_price"] if last_alert else None,
+                "reference_price": reference_price,
+            }
+        )
+        fired_alerts.append(
+            {
+                "variant_label": label,
+                "reason": reason,
+                "effective_price": effective_price,
+                "reference_price": reference_price,
             }
         )
 
@@ -228,7 +238,7 @@ def run_all(supabase) -> dict:
         len(snapshots), total,
         ", ".join(f"{k}: {v}" for k, v in sorted(by_reason.items())) or "none",
     )
-    return {"evaluated": len(snapshots), "total": total, "by_reason": by_reason}
+    return {"evaluated": len(snapshots), "total": total, "by_reason": by_reason, "fired_alerts": fired_alerts}
 
 
 def main() -> None:
