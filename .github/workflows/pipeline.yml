@@ -1,15 +1,16 @@
 name: Run pipeline
 
-# Every 6 hours -- ScraperAPI (see fetch_offers.py) fixed the earlier
+# Every 12 hours -- ScraperAPI (see fetch_offers.py) fixed the earlier
 # Flipkart 403 blocking, so this interval isn't a reliability workaround
 # anymore; it's deliberately conservative purely to control ScraperAPI
-# request-volume cost (~108 requests/run, explicit user request). Matches
-# dashboard.py's STALE_RUN_THRESHOLD_MINUTES, kept in sync with this value.
+# request-volume cost (~108 requests/run, explicit user request -- widened
+# from 6h to 12h to cut credit spend further). Matches dashboard.py's
+# STALE_RUN_THRESHOLD_MINUTES, kept in sync with this value.
 # workflow_dispatch lets a run be triggered manually from the Actions tab
 # or `gh workflow run` for testing.
 on:
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "0 */12 * * *"
   workflow_dispatch:
 
 # GitHub-side belt on top of the DB-level try_start_pipeline_run lock
