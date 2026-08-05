@@ -66,7 +66,7 @@ def _parse_timestamp(value: str) -> datetime:
     return datetime.fromisoformat(value)
 
 
-COOLDOWN_HOURS = 12
+COOLDOWN_HOURS = 24 * 7
 DROP_PCT_THRESHOLD = 5.0
 MIN_DROP_RUPEES = 300.0
 
