@@ -22,6 +22,7 @@ offers.json. Each run inserts a fresh snapshot per variant so history
 accumulates; offer_parser.py picks up snapshots where parsed_at IS NULL.
 """
 
+import concurrent.futures
 import json
 import logging
 import os
@@ -62,6 +63,12 @@ MARKETPLACE = "flipkart"
 SCRAPERAPI_KEY = os.environ.get("SCRAPERAPI_KEY")
 SCRAPERAPI_ENDPOINT = "https://api.scraperapi.com"
 SCRAPERAPI_TIMEOUT = 60  # ScraperAPI's own internal retries take longer than a direct request
+# Matches the plan's own concurrencyLimit (confirmed 5 via GET /account) --
+# ScraperAPI does its own IP rotation/header spoofing per request, so
+# concurrent requests don't present the single-source-hammering pattern
+# that got Flipkart to 403 the old direct-fetch approach. Bump this only if
+# the ScraperAPI plan's concurrency limit is raised.
+SCRAPERAPI_CONCURRENCY = 5
 
 JSONLD_RE = re.compile(
     r'<script type="application/ld\+json"[^>]*id="jsonLD"[^>]*>(.*?)</script>',
@@ -508,6 +515,17 @@ def save_to_supabase(client, result: dict[str, Any]) -> Optional[str]:
     return None
 
 
+def fetch_and_save(client, target: dict[str, str]) -> dict[str, Any]:
+    """One target's full fetch-then-write, bundled as a unit so it can be
+    dispatched to a thread pool as a single task."""
+    result = fetch_variant(target)
+    supabase_error = save_to_supabase(client, result)
+    if supabase_error:
+        label = f"{result['model']} ({result['storage']}, {result['color']})"
+        log.error("%s: %s", label, supabase_error)
+    return result
+
+
 def run_all(client, targets: Optional[list[dict[str, str]]] = None) -> dict[str, int]:
     """Fetch + save every target. Defaults to the full discovered catalogue
     (load_targets_from_discovery()) rather than the old hand-curated
@@ -519,17 +537,23 @@ def run_all(client, targets: Optional[list[dict[str, str]]] = None) -> dict[str,
         targets = load_targets_from_discovery()
 
     results = []
-    for i, target in enumerate(targets):
-        result = fetch_variant(target)
-        results.append(result)
-
-        supabase_error = save_to_supabase(client, result)
-        if supabase_error:
-            label = f"{result['model']} ({result['storage']}, {result['color']})"
-            log.error("%s: %s", label, supabase_error)
-
-        if i < len(targets) - 1:
-            time.sleep(random.uniform(MIN_DELAY, MAX_DELAY))
+    if SCRAPERAPI_KEY:
+        # Concurrent, bounded to the plan's own limit -- see
+        # SCRAPERAPI_CONCURRENCY above for why this is safe to parallelize
+        # (ScraperAPI owns IP rotation, not us).
+        with concurrent.futures.ThreadPoolExecutor(max_workers=SCRAPERAPI_CONCURRENCY) as executor:
+            futures = [executor.submit(fetch_and_save, client, target) for target in targets]
+            for future in concurrent.futures.as_completed(futures):
+                results.append(future.result())
+    else:
+        # No ScraperAPI key -- going straight at Flipkart/Amazon from one
+        # IP, so keep the original serial + randomized-delay pacing (this is
+        # the pattern that avoided detection before ScraperAPI was
+        # introduced; concurrency here would be the real risk).
+        for i, target in enumerate(targets):
+            results.append(fetch_and_save(client, target))
+            if i < len(targets) - 1:
+                time.sleep(random.uniform(MIN_DELAY, MAX_DELAY))
 
     ok = sum(1 for r in results if r["error"] is None)
     warned = sum(1 for r in results if r["match_warning"])

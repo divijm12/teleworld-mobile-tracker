@@ -35,7 +35,7 @@ from supabase_client import get_client
 
 log = logging.getLogger("offer_parser")
 
-MODEL = "claude-sonnet-5"
+MODEL = "claude-haiku-4-5"
 
 SYSTEM_PROMPT = """You extract structured data from raw Flipkart bank/card offer
 text. Each line describes one offer as shown on the product page. For each
