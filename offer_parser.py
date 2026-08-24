@@ -117,7 +117,7 @@ BANK_CANONICAL_NAMES = {
     "sbi": "SBI",
     "hdfc": "HDFC Bank",
     "icici": "ICICI Bank",
-    "kotak": "Kotak Mahindra Bank",
+    "kotak": "Kotak Bank",
     "idfc": "IDFC FIRST Bank",
     "rbl": "RBL Bank",
     "yes bank": "Yes Bank",
@@ -137,15 +137,36 @@ BANK_CANONICAL_NAMES = {
     "indian bank": "Indian Bank",
     "bank of india": "Bank of India",
 }
-KNOWN_UPI_APPS = ["BHIM", "Mobikwik", "Paytm", "PhonePe", "Google Pay", "GPay", "Amazon Pay", "Cred"]
+KNOWN_UPI_APPS = ["BHIM", "Mobikwik", "Paytm", "PhonePe", "Google Pay", "GPay", "Amazon Pay", "Cred", "SuperMoney"]
 
 CARD_TYPE_MAP = {"credit card": "credit", "debit card": "debit"}
 DISCOUNT_TYPE_MAP = {
     "cashback": "cashback",
+    "includes cashback": "cashback",
     "instant discount": "instant_discount",
     "no cost emi": "no_cost_emi",
     "flat": "flat",
 }
+# A second real raw-line template, found live (confirmed via Claude's own
+# output on the real lines below before hardcoding this): no "•" subtitle at
+# all, just a bare card-type list -- e.g. "HDFC (Credit, Debit): ₹500 off",
+# "SBI (Credit Card): ₹850 off". Every real example of this shape resolves
+# to discount_type="flat" (0 exceptions across dozens of checked rows) --
+# unlike the "•" shape, there's no discount-type wording present to read, so
+# this is a template-level fact, not a per-line guess. "Debit Card" alone
+# hasn't been seen yet but is included for symmetry with "Credit Card",
+# same "handle it correctly even if unseen" pattern as elsewhere here.
+# Bare "UPI" (no bullet, no card-type wording at all) is a third confirmed
+# real variant of this same no-bullet template -- e.g. "PhonePe (UPI):
+# ₹4,500 off" -- always resolves to card_type=None (not card-gated at all,
+# same as the "•"-shape's "upi" card_part) and discount_type="flat" (6/6
+# real rows checked, 0 exceptions).
+NO_BULLET_SUBTITLE_MAP = {"credit, debit": "both", "credit card": "credit", "debit card": "debit", "upi": None}
+# "Multiple Banks" is a real, recurring entity in this template (not a
+# specific bank) -- Claude's own output always gave it bank=None, which is
+# also what falling through matched_bank_keyword=None/is_upi_app=False
+# already produces; this just lets it resolve via regex instead of Claude.
+GENERIC_MULTI_BANK_TITLES = {"multiple banks"}
 
 # Matches extract_bank_offers_raw()'s line shape in fetch_offers.py:
 # "{title} ({subtitle}): {amount}" -- subtitle is required for the fast
@@ -174,19 +195,24 @@ def regex_parse_offer_line(raw_text: str) -> Optional[StructuredOffer]:
     amount_text = m.group("amount").strip()
 
     parts = [p.strip() for p in subtitle.split("•")]
-    if len(parts) != 2:
-        return None
-    card_part, discount_part = parts
+    has_bullet = len(parts) == 2
+    if has_bullet:
+        card_part, discount_part = parts
 
-    card_type = None
-    if card_part.lower() != "upi":
-        card_type = CARD_TYPE_MAP.get(card_part.lower())
-        if card_type is None:
-            return None  # unrecognized card-type wording -- let Claude handle it
+        card_type = None
+        if card_part.lower() != "upi":
+            card_type = CARD_TYPE_MAP.get(card_part.lower())
+            if card_type is None:
+                return None  # unrecognized card-type wording -- let Claude handle it
 
-    discount_type = DISCOUNT_TYPE_MAP.get(discount_part.lower())
-    if discount_type is None:
-        return None  # unrecognized discount-type wording
+        discount_type = DISCOUNT_TYPE_MAP.get(discount_part.lower())
+        if discount_type is None:
+            return None  # unrecognized discount-type wording
+    elif len(parts) == 1 and parts[0].lower() in NO_BULLET_SUBTITLE_MAP:
+        card_type = NO_BULLET_SUBTITLE_MAP[parts[0].lower()]
+        discount_type = "flat"  # see NO_BULLET_SUBTITLE_MAP comment -- confirmed, not guessed
+    else:
+        return None  # unrecognized subtitle shape -- let Claude handle it
 
     title_lower = title.lower()
     is_flipkart_cobranded = bool(FLIPKART_WORD_RE.search(title))
@@ -197,7 +223,8 @@ def regex_parse_offer_line(raw_text: str) -> Optional[StructuredOffer]:
     bank_search_text = FLIPKART_WORD_RE.sub("", title_lower)
     matched_bank_keyword = next((kw for kw in KNOWN_BANK_KEYWORDS if kw.lower() in bank_search_text), None)
     is_upi_app = any(kw.lower() in title_lower for kw in KNOWN_UPI_APPS)
-    if matched_bank_keyword is None and not is_upi_app:
+    is_generic_multi_bank = title_lower in GENERIC_MULTI_BANK_TITLES
+    if matched_bank_keyword is None and not is_upi_app and not is_generic_multi_bank:
         return None  # unknown entity -- don't guess whether it's a bank
 
     bank = None
@@ -227,7 +254,11 @@ def regex_parse_offer_line(raw_text: str) -> Optional[StructuredOffer]:
         discount_amount=discount_amount,
         discount_unit=discount_unit,
         min_purchase_value=min_purchase_value,
-        conditions_raw=subtitle,
+        # Matches Claude's own real output: the "•" shape's subtitle carries
+        # real condition text ("Credit Card • Includes cashback"); the
+        # no-bullet shape has none, and its subtitle is just the already-
+        # captured card_type restated -- confirmed null on every real row.
+        conditions_raw=subtitle if has_bullet else None,
         confidence="high",
         is_offer=True,
     )

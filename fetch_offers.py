@@ -33,6 +33,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 from urllib.parse import parse_qs, urlparse
 
+import httpx
 import requests
 from postgrest.exceptions import APIError
 
@@ -507,8 +508,12 @@ def save_to_supabase(client, result: dict[str, Any]) -> Optional[str]:
         ).execute()
     except APIError as e:
         return f"Supabase write failed: {e.message}"
-    except requests.exceptions.RequestException as e:
-        # supabase-py's HTTP transport can raise these on connection issues.
+    except (requests.exceptions.RequestException, httpx.HTTPError) as e:
+        # supabase-py's transport is httpx, not requests -- it can raise
+        # raw httpx errors (confirmed live: httpx.RemoteProtocolError under
+        # concurrent load) that requests.exceptions.RequestException alone
+        # doesn't catch. Both are caught here so one dropped connection on
+        # one thread can't crash the whole concurrent fetch batch.
         return f"Supabase connection error: {e}"
 
     log.info("%s: saved to Supabase (variant_id=%s)", label, variant_id)
@@ -542,9 +547,24 @@ def run_all(client, targets: Optional[list[dict[str, str]]] = None) -> dict[str,
         # SCRAPERAPI_CONCURRENCY above for why this is safe to parallelize
         # (ScraperAPI owns IP rotation, not us).
         with concurrent.futures.ThreadPoolExecutor(max_workers=SCRAPERAPI_CONCURRENCY) as executor:
-            futures = [executor.submit(fetch_and_save, client, target) for target in targets]
-            for future in concurrent.futures.as_completed(futures):
-                results.append(future.result())
+            future_to_target = {executor.submit(fetch_and_save, client, target): target for target in targets}
+            for future in concurrent.futures.as_completed(future_to_target):
+                try:
+                    results.append(future.result())
+                except Exception as e:
+                    # One worker's unexpected exception must not abort
+                    # collection of every other already-finished future's
+                    # result (confirmed live: an uncaught httpx error here
+                    # previously crashed the whole batch and silently
+                    # dropped variants, before this and the broader except
+                    # in save_to_supabase() were added).
+                    target = future_to_target[future]
+                    label = f"{target.get('model')} ({target.get('storage')}, {target.get('color')})"
+                    log.error("%s: fetch/save task crashed: %s", label, e)
+                    results.append(
+                        {"model": target.get("model"), "storage": target.get("storage"), "color": target.get("color"),
+                         "error": f"task crashed: {e}", "match_warning": None}
+                    )
     else:
         # No ScraperAPI key -- going straight at Flipkart/Amazon from one
         # IP, so keep the original serial + randomized-delay pacing (this is
