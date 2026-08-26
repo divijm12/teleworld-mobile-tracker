@@ -72,6 +72,15 @@ MARKETPLACE = "amazon"
 MIN_DELAY = 2.0  # seconds between product page visits (bank-offer fetch)
 MAX_DELAY = 4.0
 
+# Diagnostic capture only -- written when a product's Bank Offer section
+# isn't found, to tell "genuinely no bank offers on this product" apart
+# from "the page didn't render the real content at all" (bot-check page,
+# CAPTCHA, slow-network partial load, etc.), since that distinction can't
+# be made from the pipeline's own summary counts alone. Uploaded as a
+# GitHub Actions artifact by pipeline_amazon.yml -- see its "Upload debug
+# screenshots" step.
+DEBUG_SCREENSHOTS_DIR = Path(__file__).parent / "debug_screenshots"
+
 STEALTH_UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
@@ -160,6 +169,46 @@ def fetch_price_stock(asin: str, retries: int = 1) -> Optional[dict[str, Any]]:
     return None
 
 
+def _log_no_bank_offer_diagnostics(page: Page, asin: str) -> None:
+    """Called whenever bank_span.count() == 0. Captures enough to tell
+    apart a genuine "this product has no Bank Offer category" (expected,
+    normal) from "the page never actually rendered the real product page"
+    (bot-check/CAPTCHA/partial load under different network conditions --
+    e.g. GitHub Actions' datacenter IP getting treated differently than a
+    home ISP IP, the exact class of issue ScraperAPI exists to solve for
+    Flipkart)."""
+    try:
+        title = page.title()
+    except Exception as e:
+        title = f"<title lookup failed: {e}>"
+
+    try:
+        body_text = page.locator("body").inner_text(timeout=5000)
+    except Exception:
+        body_text = ""
+    bot_markers = [
+        m for m in ("Robot Check", "captcha", "Enter the characters you see below",
+                     "To discuss automated access", "api-services-support@amazon.com")
+        if m.lower() in body_text.lower()
+    ]
+    offers_carousel_present = "Bank Offer" in body_text  # the plain teaser text, not the clickable span
+    productTitle_present = page.locator("#productTitle").count() > 0
+
+    log.warning(
+        "%s: no Bank Offer section found -- diagnostics: page title=%r, "
+        "productTitle element present=%s, 'Bank Offer' text anywhere on page=%s, bot-check markers=%s",
+        asin, title, productTitle_present, offers_carousel_present, bot_markers or "none",
+    )
+
+    try:
+        DEBUG_SCREENSHOTS_DIR.mkdir(exist_ok=True)
+        screenshot_path = DEBUG_SCREENSHOTS_DIR / f"{asin}_no_bank_offer.png"
+        page.screenshot(path=str(screenshot_path), full_page=False)
+        log.info("%s: saved diagnostic screenshot to %s", asin, screenshot_path)
+    except Exception as e:
+        log.warning("%s: failed to save diagnostic screenshot: %s", asin, e)
+
+
 def fetch_bank_offers(page: Page, asin: str) -> tuple[Optional[str], Optional[str]]:
     """Navigate to the product page and, if a Bank Offer category exists,
     click through to capture the real per-bank offer lines via the
@@ -177,6 +226,7 @@ def fetch_bank_offers(page: Page, asin: str) -> tuple[Optional[str], Optional[st
 
     bank_span = page.locator('span.a-declarative[data-action="side-sheet"]', has_text="Bank Offer")
     if bank_span.count() == 0:
+        _log_no_bank_offer_diagnostics(page, asin)
         return None, None  # no bank offers on this product -- not an error
 
     try:

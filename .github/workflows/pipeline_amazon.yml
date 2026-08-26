@@ -52,3 +52,17 @@ jobs:
           SCRAPERAPI_KEY: ${{ secrets.SCRAPERAPI_KEY }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: xvfb-run -a python3 run_pipeline_amazon.py
+
+      # Diagnostic only -- fetch_offers_amazon.py writes a screenshot here
+      # whenever a product's Bank Offer section isn't found, to tell a
+      # genuine no-offers product apart from the page not actually
+      # rendering (bot-check, CAPTCHA, partial load). if-no-files-found
+      # is set to ignore since the common case is nothing to upload.
+      - name: Upload debug screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: amazon-debug-screenshots
+          path: debug_screenshots/
+          if-no-files-found: ignore
+          retention-days: 3

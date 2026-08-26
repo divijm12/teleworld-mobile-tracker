@@ -12,3 +12,4 @@ venv/
 *.egg-info/
 dist/
 build/
+debug_screenshots/
