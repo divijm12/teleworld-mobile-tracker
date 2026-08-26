@@ -368,25 +368,6 @@ def run_all(client, targets: Optional[list[dict[str, str]]] = None) -> dict[str,
             args=["--disable-blink-features=AutomationControlled"],
             ignore_default_args=["--enable-automation"],
         )
-        context = browser.new_context(user_agent=STEALTH_UA, viewport={"width": 1400, "height": 1000})
-        context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        page = context.new_page()
-
-        # Warm up the session once before the real loop -- if the
-        # "Continue shopping" interstitial (see
-        # _dismiss_continue_shopping_interstitial) is session/cookie-
-        # gated rather than purely per-request, clearing it here may
-        # reduce how often it reappears on individual product pages.
-        # Cheap either way (one extra request), and fetch_bank_offers()
-        # still independently retries the interstitial per-page as a
-        # backstop if this doesn't fully solve it.
-        try:
-            page.goto("https://www.amazon.in/", timeout=30000, wait_until="domcontentloaded")
-            page.wait_for_timeout(1500)
-            if _dismiss_continue_shopping_interstitial(page):
-                log.info("Dismissed a 'Continue shopping' interstitial during session warm-up")
-        except Exception as e:
-            log.warning("Session warm-up failed (continuing anyway): %s", e)
 
         for i, target in enumerate(targets):
             label = f"{target['model']} ({target.get('color')}, {target.get('storage')}, {target.get('ram')})"
@@ -395,7 +376,28 @@ def run_all(client, targets: Optional[list[dict[str, str]]] = None) -> dict[str,
             if price_data is None:
                 log.error("%s: price/stock lookup failed entirely", label)
 
+            # Fresh context (fresh cookies/storage) per product, not one
+            # session shared across the whole run. Confirmed live: a
+            # shared session's "Continue shopping" interstitial rate
+            # climbed across the run (1/10 -> 7/10 blocked on consecutive
+            # CI tests) even with more per-page retries, consistent with
+            # Amazon scoring session risk cumulatively across rapid
+            # back-to-back page loads rather than purely per-IP. A fresh
+            # context makes every product look like an independent first
+            # visit again.
+            context = browser.new_context(user_agent=STEALTH_UA, viewport={"width": 1400, "height": 1000})
+            context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            page = context.new_page()
+            try:
+                page.goto("https://www.amazon.in/", timeout=30000, wait_until="domcontentloaded")
+                page.wait_for_timeout(1500)
+                if _dismiss_continue_shopping_interstitial(page):
+                    log.info("%s: dismissed a 'Continue shopping' interstitial during warm-up", label)
+            except Exception as e:
+                log.warning("%s: session warm-up failed (continuing anyway): %s", label, e)
+
             offer_text, offer_error = fetch_bank_offers(page, target["asin"])
+            context.close()
             if offer_error:
                 log.warning("%s: %s", label, offer_error)
             elif offer_text is None:
