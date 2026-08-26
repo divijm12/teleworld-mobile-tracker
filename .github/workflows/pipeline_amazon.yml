@@ -1,0 +1,54 @@
+name: Run Amazon pipeline
+
+# Separate workflow from the Flipkart pipeline (pipeline.yml) -- see
+# run_pipeline_amazon.py's docstring for why they're kept apart. Offset
+# 30 minutes from Flipkart's own "0 */12" schedule purely so the two
+# don't fire at the exact same instant; the DB-level try_start_pipeline_run
+# lock (now scoped per marketplace) is what actually prevents any overlap
+# risk, this is just a courtesy against needless simultaneous load.
+on:
+  schedule:
+    - cron: "30 */12 * * *"
+  workflow_dispatch:
+
+# Same belt-and-suspenders pattern as pipeline.yml -- a distinct
+# concurrency group so this workflow can't overlap with itself, on top
+# of the DB-level marketplace-scoped lock.
+concurrency:
+  group: teleworld-pipeline-amazon
+  cancel-in-progress: false
+
+jobs:
+  run-pipeline-amazon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright Chromium + OS dependencies
+        run: python3 -m playwright install --with-deps chromium
+
+      - name: Install xvfb
+        # Chromium runs non-headless here (headless=False) -- confirmed
+        # live during investigation that Amazon's bank-offer click is
+        # silently ignored under headless mode's automation fingerprint
+        # (navigator.webdriver + "HeadlessChrome" UA), even after
+        # patching both. A real display server is required for a
+        # non-headless browser on a GUI-less CI runner -- xvfb-run below
+        # provides that virtual display.
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Run Amazon pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SCRAPERAPI_KEY: ${{ secrets.SCRAPERAPI_KEY }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: xvfb-run -a python3 run_pipeline_amazon.py

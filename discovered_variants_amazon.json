@@ -1,0 +1,94 @@
+{
+  "results": [
+    {
+      "search_term": "OnePlus Nord CE6",
+      "asin": "B0GWLTLNTV",
+      "name": "OnePlus Nord CE6 | 8GB+128GB | Lunar Pearl | Snapdragon 7s Gen 4 | Segment's Fastest Touch Response | 8000mAh Battery | 144Hz 1.5K AMOLED Display | 50MP Main + 32MP Selfie 4K Cameras | IP66,68,69,69K",
+      "color": "Lunar Pearl",
+      "storage": "128 GB",
+      "ram": "8 GB",
+      "confidence": "high"
+    },
+    {
+      "search_term": "OnePlus Nord CE6",
+      "asin": "B0GWLHWCLJ",
+      "name": "OnePlus Nord CE6 | 8GB+128GB | Fresh Blue | Snapdragon 7s Gen 4 | Segment's Fastest Touch Response | 8000mAh Battery | 144Hz 1.5K AMOLED Display | 50MP Main + 32MP Selfie 4K Cameras | IP66,68,69,69K",
+      "color": "Fresh Blue",
+      "storage": "128 GB",
+      "ram": "8 GB",
+      "confidence": "high"
+    },
+    {
+      "search_term": "OnePlus Nord CE6",
+      "asin": "B0GWLHVJRH",
+      "name": "OnePlus Nord CE6 | 8GB+128GB | Pitch Black | Snapdragon 7s Gen 4 | Segment's Fastest Touch Response | 8000mAh Battery | 144Hz 1.5K AMOLED Display | 50MP Main + 32MP Selfie 4K Cameras | IP66,68,69,69K",
+      "color": "Pitch Black",
+      "storage": "128 GB",
+      "ram": "8 GB",
+      "confidence": "high"
+    },
+    {
+      "search_term": "OnePlus Nord CE6",
+      "asin": "B0GWLV615M",
+      "name": "OnePlus Nord CE6 | 8GB+256GB | Lunar Pearl | Snapdragon 7s Gen 4 | Segment's Fastest Touch Response | 8000mAh Battery | 144Hz 1.5K AMOLED Display | 50MP Main + 32MP Selfie 4K Cameras | IP66,68,69,69K",
+      "color": "Lunar Pearl",
+      "storage": "256 GB",
+      "ram": "8 GB",
+      "confidence": "high"
+    },
+    {
+      "search_term": "OnePlus Nord CE6",
+      "asin": "B0GWLJL55D",
+      "name": "OnePlus Nord CE6 | 8GB+256GB | Pitch Black | Snapdragon 7s Gen 4 | Segment's Fastest Touch Response | 8000mAh Battery | 144Hz 1.5K AMOLED Display | 50MP Main + 32MP Selfie 4K Cameras | IP66,68,69,69K",
+      "color": "Pitch Black",
+      "storage": "256 GB",
+      "ram": "8 GB",
+      "confidence": "high"
+    },
+    {
+      "search_term": "OnePlus Nord CE6 Lite",
+      "asin": "B0GVYFM7QZ",
+      "name": "OnePlus Nord CE6 Lite | 8GB+256GB | Hyper Black | Segment's Fastest Dimensity 7400 Apex Processor | 7000mAh Battery | Segment's Highest 144Hz Refresh Rate | 50MP Main Camera, 4K Video Recording",
+      "color": "Hyper Black",
+      "storage": "256 GB",
+      "ram": "8 GB",
+      "confidence": "high"
+    },
+    {
+      "search_term": "OnePlus Nord CE6",
+      "asin": "B0GWLDWKF3",
+      "name": "OnePlus Nord CE6 | 8GB+256GB | Fresh Blue | Snapdragon 7s Gen 4 | Segment's Fastest Touch Response | 8000mAh Battery | 144Hz 1.5K AMOLED Display | 50MP Main + 32MP Selfie 4K Cameras | IP66,68,69,69K",
+      "color": "Fresh Blue",
+      "storage": "256 GB",
+      "ram": "8 GB",
+      "confidence": "high"
+    },
+    {
+      "search_term": "OnePlus Nord CE6 Lite",
+      "asin": "B0GVYXPZBS",
+      "name": "OnePlus Nord CE6 Lite | 8GB+128GB | Hyper Black | Segment's Fastest Dimensity 7400 Apex Processor | 7000mAh Battery | Segment's Highest 144Hz Refresh Rate | 50MP Main Camera, 4K Video Recording",
+      "color": "Hyper Black",
+      "storage": "128 GB",
+      "ram": "8 GB",
+      "confidence": "high"
+    },
+    {
+      "search_term": "OnePlus Nord CE6 Lite",
+      "asin": "B0GVYDLJJQ",
+      "name": "OnePlus Nord CE6 Lite | 6GB+128GB | Hyper Black | Segment's Fastest Dimensity 7400 Apex Processor | 7000mAh Battery | Segment's Highest 144Hz Refresh Rate | 50MP Main Camera, 4K Video Recording",
+      "color": null,
+      "storage": null,
+      "ram": null,
+      "confidence": "high"
+    },
+    {
+      "search_term": "OnePlus Nord CE6 Lite",
+      "asin": "B0GVYGX4JX",
+      "name": "OnePlus Nord CE6 Lite | 6GB+128GB | Vivid Mint | Segment's Fastest Dimensity 7400 Apex Processor | 7000mAh Battery | Segment's Highest 144Hz Refresh Rate | 50MP Main Camera, 4K Video Recording",
+      "color": "Vivid Mint",
+      "storage": "128 GB",
+      "ram": "6 GB",
+      "confidence": "high"
+    }
+  ]
+}
