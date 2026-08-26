@@ -209,6 +209,29 @@ def _log_no_bank_offer_diagnostics(page: Page, asin: str) -> None:
         log.warning("%s: failed to save diagnostic screenshot: %s", asin, e)
 
 
+CONTINUE_SHOPPING_TEXT = "Continue shopping"
+
+
+def _dismiss_continue_shopping_interstitial(page: Page) -> bool:
+    """Confirmed live via a CI diagnostic screenshot: GitHub Actions'
+    datacenter IP gets served a soft click-through interstitial ("Click
+    the button below to continue shopping" / "Continue shopping" button)
+    instead of the real product page -- not a CAPTCHA, no puzzle, just a
+    button Amazon serves to traffic it's suspicious of. Never reproduced
+    from a home IP, so this is IP-reputation-based, not the headless
+    fingerprint (already fixed separately). Returns True if the
+    interstitial was found and clicked through."""
+    try:
+        button = page.get_by_text(CONTINUE_SHOPPING_TEXT, exact=False)
+        if button.count() == 0:
+            return False
+        button.first.click(timeout=5000)
+        page.wait_for_timeout(2000)
+        return True
+    except Exception:
+        return False
+
+
 def fetch_bank_offers(page: Page, asin: str) -> tuple[Optional[str], Optional[str]]:
     """Navigate to the product page and, if a Bank Offer category exists,
     click through to capture the real per-bank offer lines via the
@@ -221,6 +244,19 @@ def fetch_bank_offers(page: Page, asin: str) -> tuple[Optional[str], Optional[st
         page.goto(url, timeout=30000, wait_until="domcontentloaded")
     except Exception as e:
         return None, f"page load failed: {e}"
+
+    # Check for (and clear) the interstitial up to twice -- confirmed
+    # live that it can reappear after a single dismissal on some
+    # requests, not just a one-time-per-session gate.
+    for _ in range(2):
+        if page.locator("#productTitle").count() > 0:
+            break
+        if not _dismiss_continue_shopping_interstitial(page):
+            break
+        try:
+            page.goto(url, timeout=30000, wait_until="domcontentloaded")
+        except Exception as e:
+            return None, f"page reload after interstitial failed: {e}"
 
     page.wait_for_timeout(2000)
 
@@ -334,6 +370,22 @@ def run_all(client, targets: Optional[list[dict[str, str]]] = None) -> dict[str,
         context = browser.new_context(user_agent=STEALTH_UA, viewport={"width": 1400, "height": 1000})
         context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         page = context.new_page()
+
+        # Warm up the session once before the real loop -- if the
+        # "Continue shopping" interstitial (see
+        # _dismiss_continue_shopping_interstitial) is session/cookie-
+        # gated rather than purely per-request, clearing it here may
+        # reduce how often it reappears on individual product pages.
+        # Cheap either way (one extra request), and fetch_bank_offers()
+        # still independently retries the interstitial per-page as a
+        # backstop if this doesn't fully solve it.
+        try:
+            page.goto("https://www.amazon.in/", timeout=30000, wait_until="domcontentloaded")
+            page.wait_for_timeout(1500)
+            if _dismiss_continue_shopping_interstitial(page):
+                log.info("Dismissed a 'Continue shopping' interstitial during session warm-up")
+        except Exception as e:
+            log.warning("Session warm-up failed (continuing anyway): %s", e)
 
         for i, target in enumerate(targets):
             label = f"{target['model']} ({target.get('color')}, {target.get('storage')}, {target.get('ram')})"
