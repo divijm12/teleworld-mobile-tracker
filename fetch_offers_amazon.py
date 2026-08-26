@@ -245,14 +245,15 @@ def fetch_bank_offers(page: Page, asin: str) -> tuple[Optional[str], Optional[st
     except Exception as e:
         return None, f"page load failed: {e}"
 
-    # Check for (and clear) the interstitial up to twice -- confirmed
+    # Check for (and clear) the interstitial up to three times -- confirmed
     # live that it can reappear after a single dismissal on some
     # requests, not just a one-time-per-session gate.
-    for _ in range(2):
+    for attempt in range(3):
         if page.locator("#productTitle").count() > 0:
             break
         if not _dismiss_continue_shopping_interstitial(page):
             break
+        log.info("%s: dismissed a 'Continue shopping' interstitial (attempt %d)", asin, attempt + 1)
         try:
             page.goto(url, timeout=30000, wait_until="domcontentloaded")
         except Exception as e:
