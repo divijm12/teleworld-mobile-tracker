@@ -109,6 +109,7 @@ def decide_alert(
     historical_low_price: Optional[float],
     last_alert: Optional[dict],
     now: datetime,
+    snapshot_id: Optional[int] = None,
 ) -> Optional[str]:
     """Returns one of "back_in_stock", "back_in_stock_new_low",
     "back_in_stock_price_drop", "new_low", "price_drop", or None. Pure
@@ -116,6 +117,21 @@ def decide_alert(
     testable and auditable (same inputs always give the same verdict,
     unlike an LLM call)."""
     if not in_stock:
+        return None
+
+    # Idempotency guard: if the current snapshot is the exact same one we
+    # already alerted about, nothing new has actually happened -- skip
+    # unconditionally, regardless of reason. Needed because both pipelines
+    # (Flipkart and Amazon) call this same function against the *entire*
+    # variant catalogue every run, not just the marketplace they just
+    # fetched -- confirmed live: an Amazon run re-evaluating an unchanged
+    # Flipkart variant's latest-vs-previous snapshot pair re-fired an
+    # already-sent back_in_stock alert, since neither snapshot had moved.
+    if (
+        last_alert is not None
+        and snapshot_id is not None
+        and last_alert.get("snapshot_id") == snapshot_id
+    ):
         return None
 
     # Strictly a False->True transition -- previous_in_stock is None when
@@ -194,6 +210,7 @@ def run_all(supabase) -> dict:
             historical_low_price=historical_low_price,
             last_alert=last_alert,
             now=now,
+            snapshot_id=snap["snapshot_id"],
         )
         if reason is None:
             continue
