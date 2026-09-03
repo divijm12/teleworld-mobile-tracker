@@ -20,10 +20,10 @@ from email.mime.text import MIMEText
 
 log = logging.getLogger("notify")
 
-GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS", "divijmittal122@gmail.com")
+GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
 GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
 GMAIL_TO = os.environ.get("GMAIL_TO", GMAIL_ADDRESS)
-GMAIL_CC = os.environ.get("GMAIL_CC", "jugrajsethi@gmail.com")
+GMAIL_CC = os.environ.get("GMAIL_CC")
 
 ALERT_REASON_LABELS = {
     "new_low": "New all-time low",
@@ -52,9 +52,9 @@ def send_alert_email(fired_alerts: list[dict]) -> bool:
     False if there was nothing to send or no app password configured."""
     if not fired_alerts:
         return False
-    if not GMAIL_APP_PASSWORD:
+    if not GMAIL_APP_PASSWORD or not GMAIL_ADDRESS:
         log.info(
-            "%d alert(s) fired but GMAIL_APP_PASSWORD isn't set -- skipping email notification.",
+            "%d alert(s) fired but GMAIL_ADDRESS/GMAIL_APP_PASSWORD isn't set -- skipping email notification.",
             len(fired_alerts),
         )
         return False

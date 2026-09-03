@@ -51,6 +51,8 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           SCRAPERAPI_KEY: ${{ secrets.SCRAPERAPI_KEY }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_CC: ${{ secrets.GMAIL_CC }}
         run: xvfb-run -a python3 run_pipeline_amazon.py
 
       # Diagnostic only -- fetch_offers_amazon.py writes a screenshot here
